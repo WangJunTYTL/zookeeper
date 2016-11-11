@@ -35,6 +35,7 @@ import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
 /**
+ * 服务端程序入口
  * This class starts and runs a standalone ZooKeeperServer.
  */
 public class ZooKeeperServerMain {
@@ -128,13 +129,14 @@ public class ZooKeeperServerMain {
             zkServer.registerServerShutdownHandler(
                     new ZooKeeperServerShutdownHandler(shutdownLatch));
 
-            // Start Admin server
+            // Start Admin server  端口是8080 根目录是 /commands  提供的是Restful格式的Http接口
             adminServer = AdminServerFactory.createAdminServer();
             adminServer.setZooKeeperServer(zkServer);
             adminServer.start();
 
             boolean needStartZKServer = true;
             if (config.getClientPortAddress() != null) {
+                // 创建服务端网络服务，默认提供网络服务的是Nio，也提供基于Netty组件的网络服务
                 cnxnFactory = ServerCnxnFactory.createFactory();
                 cnxnFactory.configure(config.getClientPortAddress(), config.getMaxClientCnxns(), false);
                 cnxnFactory.startup(zkServer);

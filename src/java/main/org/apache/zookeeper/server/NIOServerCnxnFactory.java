@@ -119,6 +119,7 @@ public class NIOServerCnxnFactory extends ServerCnxnFactory {
      * and SelectorThread (which selects on client connections) classes.
      */
     private abstract class AbstractSelectThread extends ZooKeeperThread {
+        // 网络监听Selector
         protected final Selector selector;
 
         public AbstractSelectThread(String name) throws IOException {
@@ -149,7 +150,7 @@ public class NIOServerCnxnFactory extends ServerCnxnFactory {
         protected void cleanupSelectionKey(SelectionKey key) {
             if (key != null) {
                 try {
-                    key.cancel();
+                    key.cancel(); // 取消监听
                 } catch (Exception ex) {
                     if (LOG.isDebugEnabled()) {
                         LOG.debug("ignoring exception during selectionkey cancel", ex);
@@ -180,8 +181,8 @@ public class NIOServerCnxnFactory extends ServerCnxnFactory {
      * descriptors by briefly sleeping before retrying.
      */
     private class AcceptThread extends AbstractSelectThread {
-        private final ServerSocketChannel acceptSocket;
-        private final SelectionKey acceptKey;
+        private final ServerSocketChannel acceptSocket; // 服务端socket
+        private final SelectionKey acceptKey; // 注册感兴趣的event
         private final RateLogger acceptErrorLogger = new RateLogger(LOG);
         private final Collection<SelectorThread> selectorThreads;
         private Iterator<SelectorThread> selectorIterator;
@@ -202,7 +203,7 @@ public class NIOServerCnxnFactory extends ServerCnxnFactory {
             try {
                 while (!stopped && !acceptSocket.socket().isClosed()) {
                     try {
-                        select();
+                        select(); // 监听socket连接
                     } catch (RuntimeException e) {
                         LOG.warn("Ignoring unexpected runtime exception", e);
                     } catch (Exception e) {
@@ -283,10 +284,10 @@ public class NIOServerCnxnFactory extends ServerCnxnFactory {
             boolean accepted = false;
             SocketChannel sc = null;
             try {
-                sc = acceptSocket.accept();
+                sc = acceptSocket.accept(); // 接受客户端连接
                 accepted = true;
                 InetAddress ia = sc.socket().getInetAddress();
-                int cnxncount = getClientCnxnCount(ia);
+                int cnxncount = getClientCnxnCount(ia); // 验证来自于同一个客户端的连接数，过多则抛出异常
 
                 if (maxClientCnxns > 0 && cnxncount >= maxClientCnxns){
                     throw new IOException("Too many connections from " + ia
@@ -301,8 +302,9 @@ public class NIOServerCnxnFactory extends ServerCnxnFactory {
                 if (!selectorIterator.hasNext()) {
                     selectorIterator = selectorThreads.iterator();
                 }
+                // 分配一个SelectorThread
                 SelectorThread selectorThread = selectorIterator.next();
-                if (!selectorThread.addAcceptedConnection(sc)) {
+                if (!selectorThread.addAcceptedConnection(sc)) { // 把socket加入到队列
                     throw new IOException(
                         "Unable to add connection to selector queue"
                         + (stopped ? " (shutdown in progress)" : ""));
@@ -357,6 +359,7 @@ public class NIOServerCnxnFactory extends ServerCnxnFactory {
          * with the selector.
          */
         public boolean addAcceptedConnection(SocketChannel accepted) {
+            // 接受连接，将socketChannel放入到队列
             if (stopped || !acceptedQueue.offer(accepted)) {
                 return false;
             }
@@ -423,8 +426,9 @@ public class NIOServerCnxnFactory extends ServerCnxnFactory {
 
         private void select() {
             try {
+                // selector 网络观察者，监听accepted
                 selector.select();
-
+                // 有网络accepted event
                 Set<SelectionKey> selected = selector.selectedKeys();
                 ArrayList<SelectionKey> selectedList =
                     new ArrayList<SelectionKey>(selected);
@@ -435,11 +439,11 @@ public class NIOServerCnxnFactory extends ServerCnxnFactory {
                     selected.remove(key);
 
                     if (!key.isValid()) {
-                        cleanupSelectionKey(key);
+                        cleanupSelectionKey(key); // 取消对该key的监听
                         continue;
                     }
                     if (key.isReadable() || key.isWritable()) {
-                        handleIO(key);
+                        handleIO(key); // 处理socket io
                     } else {
                         LOG.warn("Unexpected ops in select " + key.readyOps());
                     }
@@ -477,6 +481,7 @@ public class NIOServerCnxnFactory extends ServerCnxnFactory {
                 try {
                     key = accepted.register(selector, SelectionKey.OP_READ);
                     NIOServerCnxn cnxn = createConnection(accepted, key, this);
+                    // 绑定cnxn对象
                     key.attach(cnxn);
                     addCnxn(cnxn);
                 } catch (IOException e) {
@@ -758,10 +763,10 @@ public class NIOServerCnxnFactory extends ServerCnxnFactory {
     @Override
     public void startup(ZooKeeperServer zks, boolean startServer)
             throws IOException, InterruptedException {
-        start();
+        start(); // 启动网络服务
         setZooKeeperServer(zks);
         if (startServer) {
-            zks.startdata();
+            zks.startdata(); // 初始化数据
             zks.startup();
         }
     }

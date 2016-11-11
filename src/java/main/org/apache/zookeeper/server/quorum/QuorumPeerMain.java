@@ -117,8 +117,10 @@ public class QuorumPeerMain {
         purgeMgr.start();
 
         if (args.length == 1 && config.isDistributed()) {
+            // 集群方式运行
             runFromConfig(config);
         } else {
+            // 单实例服务运行
             LOG.warn("Either no config or no quorum defined in config, running "
                     + " in standalone mode");
             // there is only server in the quorum -- run as standalone
@@ -139,6 +141,7 @@ public class QuorumPeerMain {
           ServerCnxnFactory secureCnxnFactory = null;
 
           if (config.getClientPortAddress() != null) {
+              // 创建网络服务
               cnxnFactory = ServerCnxnFactory.createFactory();
               cnxnFactory.configure(config.getClientPortAddress(),
                       config.getMaxClientCnxns(),
@@ -152,6 +155,7 @@ public class QuorumPeerMain {
                       true);
           }
 
+          // 以集群方式启动时，会启动Quorum服务，该服务作为单独线程运行，在run方法中决定服务的角色
           quorumPeer = new QuorumPeer();
           quorumPeer.setTxnFactory(new FileTxnSnapLog(
                       config.getDataLogDir(),
@@ -179,7 +183,8 @@ public class QuorumPeerMain {
           quorumPeer.setLearnerType(config.getPeerType());
           quorumPeer.setSyncEnabled(config.getSyncEnabled());
           quorumPeer.setQuorumListenOnAllIPs(config.getQuorumListenOnAllIPs());
-          
+
+          // 启动该线程
           quorumPeer.start();
           quorumPeer.join();
       } catch (InterruptedException e) {

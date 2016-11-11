@@ -700,6 +700,7 @@ public class QuorumPeer extends ZooKeeperThread implements QuorumStats.Provider 
         super("QuorumPeer");
         quorumStats = new QuorumStats(this);
         jmxRemotePeerBean = new HashMap<Long, RemotePeerBean>();
+        // 提供web的Restful接口
         adminServer = AdminServerFactory.createAdminServer();
     }
 
@@ -1028,6 +1029,7 @@ public class QuorumPeer extends ZooKeeperThread implements QuorumStats.Provider 
              * Main loop
              */
             while (running) {
+                // 不同角色的服务启动不同的ZookeeperServer
                 switch (getPeerState()) {
                 case LOOKING:
                     LOG.info("LOOKING");

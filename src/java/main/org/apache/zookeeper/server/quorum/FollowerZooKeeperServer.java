@@ -66,11 +66,12 @@ public class FollowerZooKeeperServer extends LearnerZooKeeperServer {
     }
 
     @Override
-    protected void setupRequestProcessors() {
+    protected void setupRequestProcessors() { // 这是一个链式的处理过程
         RequestProcessor finalProcessor = new FinalRequestProcessor(this);
         commitProcessor = new CommitProcessor(finalProcessor,
                 Long.toString(getServerId()), true, getZooKeeperServerListener());
         commitProcessor.start();
+        // 第一个process，将改变状态的请求发送到leader
         firstProcessor = new FollowerRequestProcessor(this, commitProcessor);
         ((FollowerRequestProcessor) firstProcessor).start();
         syncProcessor = new SyncRequestProcessor(this,

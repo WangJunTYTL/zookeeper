@@ -176,7 +176,7 @@ public class CommitProcessor extends ZooKeeperCriticalThread implements
                 requestsToProcess =  queuedRequests.size();
                 // Avoid sync if we have something to do
                 if (requestsToProcess == 0 && !commitIsWaiting){
-                    // Waiting for requests to process
+                    // Waiting for    requests to process
                     synchronized (this) {
                         while (!stopped && requestsToProcess == 0
                                 && !commitIsWaiting) {
